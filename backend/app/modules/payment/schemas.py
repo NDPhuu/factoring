@@ -10,8 +10,8 @@ class SePayWebhookPayload(BaseModel):
     subAccount: Optional[str] = None
     transferType: str
     transferAmount: float
-    accumulated: float
+    accumulated: Optional[float] = 0.0
     code: Optional[str] = None
     content: str
-    referenceCode: str
-    description: str
+    referenceCode: Optional[str] = None
+    description: Optional[str] = None

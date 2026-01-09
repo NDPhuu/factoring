@@ -32,4 +32,11 @@ async def send_email_notification(subject: str, recipients: list[str], body: str
         await fm.send_message(message)
         print(f"✅ Email sent to {recipients}")
     except Exception as e:
-        print(f"❌ Failed to send email: {str(e)}")
+        # Fallback for Development: Print to Console
+        print(f"⚠️ SMTP Error (Expected in Dev): {str(e)}")
+        print("="*60)
+        print(f"📧 [MOCK EMAIL] To: {recipients}")
+        print(f"Subject: {subject}")
+        print("-" * 20)
+        print(body)
+        print("="*60)

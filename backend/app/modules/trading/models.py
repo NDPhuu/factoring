@@ -24,9 +24,18 @@ class Offer(Base):
     
     # Chi tiết Offer
     interest_rate: Mapped[float] = mapped_column(DECIMAL(5, 2), nullable=False) # Lãi suất năm (VD: 12.5%)
-    funding_amount: Mapped[float] = mapped_column(DECIMAL(18, 2), nullable=False) # Số tiền tài trợ (VD: 800tr)
-    platform_fee: Mapped[float] = mapped_column(DECIMAL(18, 2), nullable=False)   # Phí sàn (10tr)
-    net_amount_to_sme: Mapped[float] = mapped_column(DECIMAL(18, 2), nullable=False) # Tiền SME thực nhận (790tr)
+    
+    # 1. FI -> Platform
+    funding_amount: Mapped[float] = mapped_column(DECIMAL(18, 2), nullable=False) # Tiền FI tài trợ (Gốc)
+    fi_disbursement_amount: Mapped[float] = mapped_column(DECIMAL(18, 2), nullable=True) # CashIn_FI = V * (1-D) (Thực tế chuyển vào)
+
+    # 2. Platform -> SME
+    platform_fee: Mapped[float] = mapped_column(DECIMAL(18, 2), nullable=False)   # Phí dịch vụ (F_sme)
+    net_amount_to_sme: Mapped[float] = mapped_column(DECIMAL(18, 2), nullable=False) # CashOut_SME (Thực nhận)
+
+    # 3. Platform -> FI (Repayment Phase)
+    platform_commission_from_fi: Mapped[float] = mapped_column(DECIMAL(18, 2), nullable=True) # C_fi (Hoa hồng)
+    net_to_fi: Mapped[float] = mapped_column(DECIMAL(18, 2), nullable=True) # CashOut_FI (FI thực nhận về)
 
     tenor_days: Mapped[int] = mapped_column(Integer, nullable=False) # Kỳ hạn (VD: 90 ngày)
     

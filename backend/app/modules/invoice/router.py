@@ -146,7 +146,6 @@ async def get_my_invoices(
             "grade": inv.credit_score.grade if inv.credit_score else None
         }
         for inv in invoices
-        for inv in invoices
     ]
 
 @router.get("/admin/all", response_model=List[dict])

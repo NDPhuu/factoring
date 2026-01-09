@@ -1,9 +1,15 @@
-from supabase import create_client, Client
+from supabase import create_client, Client, ClientOptions
 from app.core.config import settings
 
 class SupabaseStorage:
     def __init__(self):
-        self.supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
+        # Ensure URL has trailing slash (fixes some storage3/httpx issues)
+        url = settings.SUPABASE_URL
+        # if not url.endswith("/"):
+        #     url += "/"
+            
+        print(f"DEBUG: Supabase Configuration URL: {url} (Raw from settings)")
+        self.supabase: Client = create_client(url, settings.SUPABASE_KEY)
         self.bucket_name = "factoring-assets"
 
     def upload_file(self, file_content: bytes, destination_path: str, content_type: str) -> str:

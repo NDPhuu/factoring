@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiService } from "@/services/api";
+import { apiService, API_URL } from "@/services/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -226,7 +226,7 @@ export function UserApprovalPage() {
                                                 // But we put it in URL. 
                                                 // Example: /files/123/abc.pdf -> OK.
                                                 // Example: /files/uploads/abc.pdf -> OK.
-                                                const fileUrl = normalizedPath ? `https://elliott-practical-rolling-space.trycloudflare.com/api/v1/auth/files/${normalizedPath}?token=${token}` : '';
+                                                const fileUrl = normalizedPath ? `${API_URL}/auth/files/${normalizedPath}?token=${token}` : '';
                                                 const filename = normalizedPath.split('/').pop(); // Extract just name for display
                                                 const isPdf = normalizedPath.toLowerCase().endsWith('.pdf');
 

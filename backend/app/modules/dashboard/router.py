@@ -118,7 +118,7 @@ async def get_admin_summary(
     
     return {
         "total_gmv": total_financed,
-        "platform_fees": total_financed * 0.01, # Mock 1% fee
+        "platform_fees": float(total_financed) * 0.01, # Mock 1% fee
         "active_smes": active_smes,
         "active_fis": active_fis
     }

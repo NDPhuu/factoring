@@ -58,6 +58,141 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
     return user
 
 
+@router.post("/register/sme", response_model=auth_schemas.UserResponse)
+async def register_sme(payload: auth_schemas.RegisterSMERequest, db: AsyncSession = Depends(get_db)):
+    # 1. Check email exists
+    print(f"DEBUG: Registering SME - Checking email {payload.user.email}")
+    result = await db.execute(select(auth_models.User).where(auth_models.User.email == payload.user.email))
+    if result.scalar_one_or_none():
+        print("DEBUG: Email already exists")
+        raise HTTPException(status_code=400, detail="Email already registered")
+
+    # 2. Check tax code exists
+    print(f"DEBUG: Checking tax code {payload.sme.tax_code}")
+    result = await db.execute(select(sme_models.SME).where(sme_models.SME.tax_code == payload.sme.tax_code))
+    if result.scalar_one_or_none():
+         print("DEBUG: Tax Code already exists")
+         raise HTTPException(status_code=400, detail="Tax Code already exists")
+
+    # 3. Create User
+    new_user = auth_models.User(
+        email=payload.user.email,
+        hashed_password=get_password_hash(payload.user.password),
+        full_name=payload.user.full_name,
+        role=UserRole.SME,
+        is_active=False # Wait for Admin Approval
+    )
+    db.add(new_user)
+    await db.flush() # Get ID
+
+    # 4. Create SME Profile
+    new_sme = sme_models.SME(
+        user_id=new_user.id, # Link via FK
+        tax_code=payload.sme.tax_code,
+        company_name=payload.sme.company_name,
+        address=payload.sme.address,
+        legal_rep_name=payload.sme.legal_rep_name,
+        legal_rep_cccd=payload.sme.legal_rep_cccd,
+        phone_number=payload.sme.phone_number,
+        business_license_path=payload.sme.business_license_path,
+        cccd_front_path=payload.sme.cccd_front_path,
+        cccd_back_path=payload.sme.cccd_back_path,
+        portrait_path=payload.sme.portrait_path
+    )
+    db.add(new_sme)
+    
+    await db.commit()
+    await db.commit()
+    # Reload user with relationship to avoid MissingGreenlet
+    stmt = select(auth_models.User).options(
+        selectinload(auth_models.User.sme_profile),
+        selectinload(auth_models.User.fi_profile)
+    ).where(auth_models.User.id == new_user.id)
+    result = await db.execute(stmt)
+    return result.scalar_one()
+
+@router.post("/register/fi", response_model=auth_schemas.UserResponse)
+async def register_fi(payload: auth_schemas.RegisterFIRequest, db: AsyncSession = Depends(get_db)):
+    # 1. Check email exists
+    result = await db.execute(select(auth_models.User).where(auth_models.User.email == payload.user.email))
+    if result.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Email already registered")
+
+    # 2. Create User
+    new_user = auth_models.User(
+        email=payload.user.email,
+        hashed_password=get_password_hash(payload.user.password),
+        full_name=payload.user.full_name,
+        role=UserRole.FI,
+        is_active=False # Wait for Admin Approval
+    )
+    db.add(new_user)
+    await db.flush()
+
+    # 3. Create FI Profile
+    new_fi = fi_models.FinancialInstitution(
+        user_id=new_user.id, # Link via FK
+        name=payload.fi.name,
+        short_name=payload.fi.short_name,
+        fi_type=payload.fi.fi_type,
+        contact_person_name=payload.fi.contact_person_name,
+        contact_phone=payload.fi.contact_phone,
+        risk_config=payload.fi.risk_config
+    )
+    db.add(new_fi)
+    
+    await db.commit()
+    await db.commit()
+    # Reload user with relationship to avoid MissingGreenlet
+    stmt = select(auth_models.User).options(
+        selectinload(auth_models.User.sme_profile),
+        selectinload(auth_models.User.fi_profile)
+    ).where(auth_models.User.id == new_user.id)
+    result = await db.execute(stmt)
+    return result.scalar_one()
+
+@router.post("/login", response_model=auth_schemas.Token)
+async def login_for_access_token(
+    form_data: OAuth2PasswordRequestForm = Depends(), 
+    db: AsyncSession = Depends(get_db)
+):
+    # Determine if username is email
+    # Our DB stores email, form_data.username will be mapped to email
+    print(f"DEBUG: Login attempt for {form_data.username}")
+    stmt = select(auth_models.User).where(auth_models.User.email == form_data.username)
+    result = await db.execute(stmt)
+    user = result.scalar_one_or_none()
+    
+    if user:
+        print(f"DEBUG: User found: {user.email}, ID: {user.id}, Role: {user.role}, Hash: {user.hashed_password[:10]}...")
+        pwd_check = verify_password(form_data.password, user.hashed_password)
+        print(f"DEBUG: Password check result: {pwd_check}")
+    else:
+        print("DEBUG: User NOT found.")
+
+    if not user or not verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Inactive user"
+        )
+        
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": str(user.id)}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@router.get("/me", response_model=auth_schemas.UserResponse)
+async def read_users_me(current_user: User = Depends(get_current_user)):
+    return current_user
+
 from fastapi.responses import RedirectResponse
 from app.core.supabase_storage import supabase_storage
 
@@ -77,6 +212,7 @@ async def get_uploaded_file_manual(
         raise HTTPException(status_code=401, detail="Authentication required")
 
     try:
+        print(f"DEBUG FILE ACCESS TOKEN: {token}")
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         user_id = payload.get("sub")
         if user_id is None:
@@ -98,8 +234,11 @@ async def get_uploaded_file_manual(
     
     if first_part.isdigit():
         path_sme_id = int(first_part)
-        # Allow if Admin OR (User is SME and ID matches)
-        if not is_admin:
+        # Allow if Admin OR (User is SME and ID matches) OR (User is FI)
+        if is_admin or user.role == UserRole.FI:
+            pass # Access granted for Admin and FIs (Marketplace Due Diligence)
+        else:
+            # Must be SME and own the folder
             if not user.sme_profile or user.sme_profile.id != path_sme_id:
                 raise HTTPException(status_code=403, detail="You do not own this file")
                 
@@ -156,9 +295,12 @@ async def upload_kyc_document(
         
         supabase_storage.upload_file(content, destination_path, file.content_type)
             
-        return {"file_path": unique_filename}
+        # Return FULL path so DB stores "uploads/..."
+        return {"file_path": destination_path}
         
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
 @router.put("/admin/approve/{user_id}")

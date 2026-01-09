@@ -12,9 +12,11 @@ class InvoiceStatus(str, enum.Enum):
     VERIFIED = "VERIFIED"
     REJECTED = "REJECTED"
     TRADING = "TRADING"
-    FINANCED = "FINANCED"
-    DISBURSED = "DISBURSED"
-    CLOSED = "CLOSED"
+    FINANCED = "FINANCED"               # Deal closed (APPROVED)
+    FUNDING_RECEIVED = "FUNDING_RECEIVED" # FI transferred to Platform
+    DISBURSED = "DISBURSED"             # Platform transferred to SME
+    REPAYMENT_RECEIVED = "REPAYMENT_RECEIVED" # Debtor paid Platform
+    CLOSED = "CLOSED"                   # Platform remitted to FI
 
 class DocumentType(str, enum.Enum):
     CONTRACT = "CONTRACT"

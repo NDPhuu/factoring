@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'https://elliott-practical-rolling-space.trycloudflare.com/api/v1';
+export const API_URL = 'https://providers-green-capacity-screenshot.trycloudflare.com/api/v1';
 
 export const api = axios.create({
     baseURL: API_URL,
@@ -49,14 +49,17 @@ export const apiService = {
     }),
 
     // Trading
-    getTradingInvoices: () => api.get('/trading/invoices'),
+    getTradingInvoices: () => api.get('/trading/marketplace'),
+    getDealDetails: (id: number) => api.get(`/trading/deals/${id}`),
     makeOffer: (data: any) => api.post('/trading/offers', data),
     getOffers: (invoiceId: number) => api.get(`/trading/offers?invoice_id=${invoiceId}`),
+    getMyOffers: () => api.get('/trading/offers'),
     acceptOffer: (offerId: number) => api.post(`/trading/offers/${offerId}/accept`),
     getPaymentKit: (invoiceId: number) => api.get(`/trading/deals/${invoiceId}/payment-kit`),
 
     // Dashboard
     getSMESummary: () => api.get('/dashboard/sme/summary'),
+    getFISummary: () => api.get('/dashboard/fi/summary'),
     getAdminSummary: () => api.get('/dashboard/admin/summary'),
     getPendingUsers: () => api.get('/auth/admin/users?status=pending'),
     getAllUsers: () => api.get('/auth/admin/users'),
@@ -64,4 +67,12 @@ export const apiService = {
     rejectUser: (userId: number, reason: string) => api.put(`/auth/admin/reject/${userId}`, { reason }),
     getAllInvoices: () => api.get('/invoices/admin/all'),
     getTransactionLogs: () => api.get('/payment/admin/transactions'),
+    approveDisbursement: (invoiceId: number) => api.post(`/payment/admin/disburse/${invoiceId}`),
+    confirmFunding: (invoiceId: number) => api.post(`/payment/admin/confirm-funding/${invoiceId}`),
+
+    // Simulation (Demo)
+    simulateFIFunding: (id: number) => api.post(`/payment/simulate/fi-fund/${id}`),
+    simulatePlatformDisburse: (id: number) => api.post(`/payment/simulate/platform-disburse/${id}`),
+    simulateDebtorPay: (id: number) => api.post(`/payment/simulate/debtor-pay/${id}`),
+    simulatePlatformRemit: (id: number) => api.post(`/payment/simulate/platform-remit/${id}`),
 };

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Landmark, ArrowUpRight, DollarSign, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
+import { DealDetailDrawer } from "./deal-detail-drawer";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -86,36 +87,14 @@ export default function FIMarketplace({ onLogout }: FIMarketplaceProps) {
                 ))}
             </div>
 
-            <Dialog open={!!selectedInv} onOpenChange={(o) => !o && setSelectedInv(null)}>
-                <DialogContent className="sm:max-w-md rounded-[32px]">
-                    <DialogHeader>
-                        <DialogTitle>Đề nghị tài trợ</DialogTitle>
-                        <DialogDescription>Nhập lãi suất và số tiền bạn muốn tài trợ cho hóa đơn #{selectedInv?.invoice_number}</DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                        <div className="space-y-2">
-                            <Label>Lãi suất mong muốn (%/năm)</Label>
-                            <Input type="number" step="0.1" value={offerForm.rate}
-                                onChange={(e) => setOfferForm(prev => ({ ...prev, rate: Number(e.target.value) }))}
-                                className="text-lg font-bold"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Số tiền tài trợ (VND)</Label>
-                            <Input type="number" value={offerForm.amount}
-                                onChange={(e) => setOfferForm(prev => ({ ...prev, amount: Number(e.target.value) }))}
-                                className="text-lg font-bold"
-                            />
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setSelectedInv(null)}>Hủy</Button>
-                        <Button onClick={handleSubmitOffer} disabled={isPending} className="bg-slate-900 text-white">
-                            <DollarSign className="mr-2 h-4 w-4" /> Gửi Offer
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            <DealDetailDrawer
+                invoiceId={selectedInv ? selectedInv.id : null}
+                onClose={() => setSelectedInv(null)}
+                onOfferSuccess={() => {
+                    // Refresh logic if needed, or rely on react-query invalidation
+                    // setInvoices(prev => prev.filter(i => i.id !== selectedInv.id));
+                }}
+            />
         </div>
     );
 }

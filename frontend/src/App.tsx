@@ -5,6 +5,8 @@ import { LoginForm } from './features/auth/login-form';
 import { RegisterSMEForm } from './features/auth/register-sme-form';
 import SMEDashboard from './features/dashboard/sme-dashboard';
 import FIMarketplace from './features/trading/fi-marketplace';
+import { FILayout } from './features/trading/layouts/fi-layout';
+import { FIDashboard, FIPortfolio, FISettings } from './features/trading/pages/fi-pages';
 
 // Admin Imports
 import { AdminLayout } from './features/admin/layouts/admin-layout';
@@ -21,6 +23,9 @@ const App: React.FC = () => {
 
   // Admin Navigation State
   const [adminPage, setAdminPage] = useState<string>('dashboard');
+
+  // FI Navigation State
+  const [fiPage, setFiPage] = useState<string>('marketplace');
 
   useEffect(() => {
     if (token && !currentUser) {
@@ -73,8 +78,21 @@ const App: React.FC = () => {
     return <SMEDashboard onLogout={handleLogout} />;
   }
 
+
+
   if (currentUser.role === UserRole.FI) {
-    return <FIMarketplace onLogout={handleLogout} />;
+    return (
+      <FILayout
+        currentPage={fiPage}
+        onNavigate={setFiPage}
+        onLogout={handleLogout}
+      >
+        {fiPage === 'dashboard' && <FIDashboard />}
+        {fiPage === 'marketplace' && <FIMarketplace onLogout={handleLogout} />}
+        {fiPage === 'portfolio' && <FIPortfolio />}
+        {fiPage === 'settings' && <FISettings />}
+      </FILayout>
+    );
   }
 
   if (currentUser.role === UserRole.ADMIN) {

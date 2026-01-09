@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Header, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 import re
+from datetime import datetime
 
 from app.core.database import get_db
 from app.core.config import settings
@@ -100,61 +102,109 @@ async def sepay_webhook(
     )
     db.add(new_tx) 
 
-    # 4. LOGIC KHỚP LỆNH TỰ ĐỘNG (RECONCILIATION)
+    # 4. LOGIC KHỚP LỆNH TỰ ĐỘNG (INTERMEDIARY MODEL)
     # Tìm mã hóa đơn trong nội dung chuyển khoản
     search_text = (payload.code or "") + (payload.content or "")
-    
-    # Regex bắt: INV-123, INV-123 SME, INV-123 FEE
-    match = re.search(r"INV-(\d+)(?:\s+(SME|FEE))?", search_text.upper())
+    # Support INV-2, INV 2, INV2 case insensitive
+    match = re.search(r"INV[- ]?(\d+)", search_text.upper())
     
     if match:
         invoice_id = int(match.group(1))
-        suffix = match.group(2) # "SME", "FEE" hoặc None
         
-        invoice = await db.get(inv_models.Invoice, invoice_id)
+        # Nạp Invoice và Offer Accept
+        stmt = select(inv_models.Invoice).options(selectinload(inv_models.Invoice.offers)).where(inv_models.Invoice.id == invoice_id)
+        res = await db.execute(stmt)
+        invoice = res.scalar_one_or_none()
         
-        if invoice and payload.transferType == "in": # Chỉ xử lý tiền VÀO tài khoản Platform (hoặc được theo dõi)
+        if invoice:
+            accepted_offer = next((o for o in invoice.offers if o.status == trade_models.OfferStatus.ACCEPTED), None)
+            amount_in = float(payload.transferAmount)
             
-            # Copy dict để đảm bảo thay đổi được track
-            details = dict(invoice.verification_details or {})
-            
-            # Kịch bản 1: Phí sàn (INV-{id} FEE)
-            if suffix == "FEE":
-                details['fee_paid'] = True
-                print(f"💰 Invoice #{invoice_id}: Fee Paid")
-                
-            # Kịch bản 2: Giải ngân cho SME (INV-{id} SME)
-            # Lưu ý: Nếu dòng tiền này vào TK Platform, nghĩa là FI chuyển qua Platform để Platform chuyển tiếp SME?
-            # Hoặc SePay đang track TK của SME? (Theo yêu cầu đề bài)
-            elif suffix == "SME":
-                details['sme_received'] = True
-                print(f"💰 Invoice #{invoice_id}: SME Received Disbursement")
-            
-            # Kịch bản 3: Tự động chuyển status DISBURSED
-            if details.get('fee_paid') and details.get('sme_received') and invoice.status == inv_models.InvoiceStatus.FINANCED:
-                invoice.status = inv_models.InvoiceStatus.DISBURSED
-                print(f"🚀 Invoice #{invoice_id} -> DISBURSED")
-            
-            # Lưu lại verification_details
-            invoice.verification_details = details
+            # --- CASE 1: FI Funding (TIỀN VÀO - IN) ---
+            if payload.transferType == "in" and accepted_offer:
+                if invoice.status == inv_models.InvoiceStatus.FINANCED and abs(amount_in - accepted_offer.fi_disbursement_amount) < 50000:
+                    invoice.status = inv_models.InvoiceStatus.FUNDING_RECEIVED
+                    print(f"💰 Invoice #{invoice_id}: FI Funding Received ({amount_in})")
+                    
+                # --- CASE 2: Debtor Repayment (TIỀN VÀO - IN) ---
+                elif invoice.status == inv_models.InvoiceStatus.DISBURSED and abs(amount_in - float(invoice.total_amount)) < 50000:
+                    invoice.status = inv_models.InvoiceStatus.REPAYMENT_RECEIVED
+                    print(f"💰 Invoice #{invoice_id}: Debtor Repayment Received ({amount_in})")
 
-            # Kịch bản 4: Thu hồi nợ (INV-{id} KHÔNG CÓ SUFFIX)
-            if suffix is None and invoice.status == inv_models.InvoiceStatus.DISBURSED:
-                # Kiểm tra số tiền (cho phép sai số nhỏ)
-                # if payload.transferAmount >= (float(invoice.total_amount) * 0.99):
-                 if payload.transferAmount >= 1000: # Demo threshold
-                     invoice.status = inv_models.InvoiceStatus.CLOSED
-                     print(f"🏁 Invoice #{invoice_id} -> CLOSED (Repayment Complete)")
+            # --- CASE 3: Platform Disbursement (TIỀN RA - OUT) ---
+            elif payload.transferType == "out":
+                 # Tìm giao dịch PENDING khớp lệnh
+                 # Logic: Tìm transaction PENDING cũ có amount tương ứng và related_invoice_id này
+                 pending_tx_stmt = select(pay_models.BankTransaction).where(
+                     pay_models.BankTransaction.status == "PENDING",
+                     pay_models.BankTransaction.transfer_type == "out",
+                     pay_models.BankTransaction.related_invoice_id == invoice_id
+                 )
+                 pending_tx_res = await db.execute(pending_tx_stmt)
+                 pending_tx = pending_tx_res.scalar_one_or_none()
+                 
+                 if pending_tx and abs(amount_in - float(pending_tx.transfer_amount)) < 50000:
+                     pending_tx.status = "SUCCESS"
+                     pending_tx.sepay_id = payload.id # Link với ID thật
                      
-        # Kịch bản dự phòng cho tiền RA (nếu cần)
-        elif invoice and payload.transferType == "out":
-             pass
-
+                     # Update Invoice Status
+                     if invoice.status == inv_models.InvoiceStatus.FUNDING_RECEIVED:
+                         invoice.status = inv_models.InvoiceStatus.DISBURSED
+                         print(f"✅ Invoice #{invoice_id}: Disbursement Successful")
+                     elif invoice.status == inv_models.InvoiceStatus.REPAYMENT_RECEIVED:
+                         invoice.status = inv_models.InvoiceStatus.CLOSED
+                         print(f"✅ Invoice #{invoice_id}: Deal Closed")
 
     await db.commit()
-    
-    # SePay yêu cầu response này để xác nhận thành công
     return {"success": True}
+
+# ==============================================================================
+# API SIMULATION (FOR DEMO/TESTING)
+# ==============================================================================
+
+@router.post("/simulate/fi-fund/{invoice_id}")
+async def simulate_fi_fund(invoice_id: int, db: AsyncSession = Depends(get_db)):
+    """Bước 1: Giả lập FI chuyển tiền vào Platform"""
+    invoice = await db.get(inv_models.Invoice, invoice_id)
+    if not invoice or invoice.status != inv_models.InvoiceStatus.FINANCED:
+        raise HTTPException(status_code=400, detail="Invoice not ready for funding")
+    
+    invoice.status = inv_models.InvoiceStatus.FUNDING_RECEIVED
+    await db.commit()
+    return {"status": "FUNDING_RECEIVED", "message": "FI Funds received in Intermediary Account"}
+
+@router.post("/simulate/platform-disburse/{invoice_id}")
+async def simulate_platform_to_sme(invoice_id: int, db: AsyncSession = Depends(get_db)):
+    """Bước 2: Platform giải ngân Net cho SME"""
+    invoice = await db.get(inv_models.Invoice, invoice_id)
+    if not invoice or invoice.status != inv_models.InvoiceStatus.FUNDING_RECEIVED:
+         raise HTTPException(status_code=400, detail="Funds not received yet")
+         
+    invoice.status = inv_models.InvoiceStatus.DISBURSED
+    await db.commit()
+    return {"status": "DISBURSED", "message": "Funds transferred to SME"}
+
+@router.post("/simulate/debtor-pay/{invoice_id}")
+async def simulate_debtor_pay(invoice_id: int, db: AsyncSession = Depends(get_db)):
+    """Bước 3: Debtor trả tiền cho Platform"""
+    invoice = await db.get(inv_models.Invoice, invoice_id)
+    if not invoice or invoice.status != inv_models.InvoiceStatus.DISBURSED:
+         raise HTTPException(status_code=400, detail="Invoice not disbursed yet")
+         
+    invoice.status = inv_models.InvoiceStatus.REPAYMENT_RECEIVED
+    await db.commit()
+    return {"status": "REPAYMENT_RECEIVED", "message": "Debtor repayment received"}
+
+@router.post("/simulate/platform-remit/{invoice_id}")
+async def simulate_platform_remit(invoice_id: int, db: AsyncSession = Depends(get_db)):
+    """Bước 4: Platform trả tiền lại cho FI (Close Deal)"""
+    invoice = await db.get(inv_models.Invoice, invoice_id)
+    if not invoice or invoice.status != inv_models.InvoiceStatus.REPAYMENT_RECEIVED:
+         raise HTTPException(status_code=400, detail="Repayment not received yet")
+         
+    invoice.status = inv_models.InvoiceStatus.CLOSED
+    await db.commit()
+    return {"status": "CLOSED", "message": "Funds remitted to FI. Deal Closed."}
 
 # ==============================================================================
 # API 3: XÁC NHẬN GIẢI NGÂN THỦ CÔNG (CHO FI)
@@ -193,3 +243,101 @@ async def get_transaction_logs(
     stmt = select(pay_models.BankTransaction).order_by(pay_models.BankTransaction.transaction_date.desc()).limit(100)
     result = await db.execute(stmt)
     return result.scalars().all()
+
+# ==============================================================================
+# API 4: ADMIN APPROVE DISBURSEMENT (STEP A)
+# ==============================================================================
+@router.post("/admin/disburse/{invoice_id}")
+async def admin_approve_disbursement(
+    invoice_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Step A: Admin approves disbursement.
+    - Creates PENDING transaction.
+    - Returns transfer details for Admin to execute manually (scan QR).
+    """
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Only Admin can approve disbursement")
+
+    # 1. Load Invoice & Offer
+    stmt = select(inv_models.Invoice).options(selectinload(inv_models.Invoice.offers)).where(inv_models.Invoice.id == invoice_id)
+    result = await db.execute(stmt)
+    invoice = result.scalar_one_or_none()
+
+    if not invoice or invoice.status != inv_models.InvoiceStatus.FUNDING_RECEIVED:
+        raise HTTPException(status_code=400, detail="Invoice not ready for disbursement (Funds not received yet)")
+
+    accepted_offer = next((o for o in invoice.offers if o.status == trade_models.OfferStatus.ACCEPTED), None)
+    if not accepted_offer:
+        raise HTTPException(status_code=400, detail="No accepted offer found")
+
+    # 2. Prevent Double Spending (Check if PENDING tx exists)
+    pending_check = await db.execute(select(pay_models.BankTransaction).where(
+        pay_models.BankTransaction.related_invoice_id == invoice_id,
+        pay_models.BankTransaction.status == "PENDING",
+        pay_models.BankTransaction.transfer_type == "out"
+    ))
+    existing_pending_tx = pending_check.scalar_one_or_none()
+    
+    if existing_pending_tx:
+         # IDEMPOTENCY: If already pending, just return the existing instructions
+         return {
+            "message": "Disbursement already approved. Use existing details.",
+            "amount": float(existing_pending_tx.transfer_amount),
+            "content": existing_pending_tx.content,
+            "status": "PENDING"
+        }
+
+    # 3. Create PENDING Transaction
+    # Amount needed to transfer to SME
+    amount_to_sme = accepted_offer.net_amount_to_sme
+    
+    # In real app: Fetch SME bank account. For MVP: standard message
+    transfer_content = f"DISBURSE INV-{invoice.id}"
+    
+    pending_tx = pay_models.BankTransaction(
+        transfer_type="out",
+        transfer_amount=amount_to_sme,
+        content=transfer_content,
+        code=f"INV-{invoice.id}",
+        related_invoice_id=invoice.id,
+        status="PENDING",
+        gateway="MBBank", # Mock
+        account_number="SME_ACCOUNT", # Mock
+        transaction_date=datetime.now(),
+        sepay_id=None # Null until matched
+    )
+    
+    db.add(pending_tx)
+    await db.commit()
+    
+    return {
+        "message": "Disbursement Approved. Please transfer funds now.",
+        "amount": amount_to_sme,
+        "content": transfer_content,
+        "status": "PENDING"
+    }
+
+@router.post("/admin/confirm-funding/{invoice_id}")
+async def admin_confirm_fi_funding(
+    invoice_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Manual override: Admin confirms they received FI money.
+    Moves status from FINANCED -> FUNDING_RECEIVED.
+    """
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Only Admin can confirm funding")
+
+    invoice = await db.get(inv_models.Invoice, invoice_id)
+    if not invoice or invoice.status != inv_models.InvoiceStatus.FINANCED:
+        raise HTTPException(status_code=400, detail="Invoice not in FINANCED state")
+        
+    invoice.status = inv_models.InvoiceStatus.FUNDING_RECEIVED
+    await db.commit()
+    
+    return {"message": "Funding Confirmed. Invoice ready for disbursement."}

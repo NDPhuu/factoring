@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
 import { Loader2, Upload, FileText, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -23,7 +22,7 @@ export function InvoiceUpload({ onSuccess }: InvoiceUploadProps) {
 
     // Simulated Progress Effect
     useEffect(() => {
-        let interval: NodeJS.Timeout;
+        let interval: any;
         if (isPending) {
             setUploadProgress(10);
             interval = setInterval(() => {
@@ -48,16 +47,17 @@ export function InvoiceUpload({ onSuccess }: InvoiceUploadProps) {
         }
 
         const fd = new FormData();
-        fd.append("file_xml", files.xml);
-        fd.append("file_invoice_pdf", files.invoice_pdf);
-        fd.append("file_contract_pdf", files.contract_pdf);
-        fd.append("file_delivery_pdf", files.delivery_pdf);
+        fd.append("xml_file", files.xml);
+        fd.append("invoice_pdf", files.invoice_pdf);
+        fd.append("contract_file", files.contract_pdf);
+        fd.append("delivery_file", files.delivery_pdf);
 
         upload(fd, {
             onSuccess: () => {
                 setUploadProgress(100);
                 toast.success("Upload hóa đơn thành công! Đang chờ chấm điểm...");
-                setTimeout(onSuccess, 1000); // Wait for user to see 100%
+                setFiles({ xml: null, invoice_pdf: null, contract_pdf: null, delivery_pdf: null }); // Clear form
+                setTimeout(onSuccess, 1000);
             },
             onError: (err) => {
                 console.error(err);

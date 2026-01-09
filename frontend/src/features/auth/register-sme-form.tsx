@@ -33,7 +33,7 @@ interface RegisterSMEFormProps {
 export function RegisterSMEForm({ onSuccess, onCancel }: RegisterSMEFormProps) {
     const [step, setStep] = useState<1 | 2>(1)
     const [loading, setLoading] = useState(false)
-    const [uploadedPaths, setUploadedPaths] = useState<Record<string, string>>({})
+    const [uploadedFiles, setUploadedFiles] = useState<Record<string, { path: string, name: string }>>({})
     const [uploadingKey, setUploadingKey] = useState<string | null>(null)
     const [progress, setProgress] = useState(0)
 
@@ -75,10 +75,14 @@ export function RegisterSMEForm({ onSuccess, onCancel }: RegisterSMEFormProps) {
         setUploadingKey(key);
         try {
             const path = await apiService.uploadKYC(file)
-            setUploadedPaths(prev => ({ ...prev, [key]: path }))
+            setUploadedFiles(prev => ({
+                ...prev,
+                [key]: { path, name: file.name }
+            }))
             setProgress(100);
             toast.success("Tải lên thành công!");
         } catch (err) {
+            console.error(err);
             toast.error("Upload thất bại, vui lòng thử lại.");
         } finally {
             setTimeout(() => setUploadingKey(null), 500);
@@ -86,7 +90,7 @@ export function RegisterSMEForm({ onSuccess, onCancel }: RegisterSMEFormProps) {
     }
 
     const onSubmit = async (values: z.infer<typeof companySchema>) => {
-        if (Object.keys(uploadedPaths).length < 4) {
+        if (Object.keys(uploadedFiles).length < 4) {
             toast.error("Vui lòng upload đủ 4 loại giấy tờ trước khi gửi")
             return
         }
@@ -106,10 +110,10 @@ export function RegisterSMEForm({ onSuccess, onCancel }: RegisterSMEFormProps) {
                     legal_rep_name: values.legal_rep_name,
                     legal_rep_cccd: values.legal_rep_cccd,
                     phone_number: values.phone_number,
-                    business_license_path: uploadedPaths['business_license'],
-                    cccd_front_path: uploadedPaths['cccd_front'],
-                    cccd_back_path: uploadedPaths['cccd_back'],
-                    portrait_path: uploadedPaths['portrait']
+                    business_license_path: uploadedFiles['business_license'].path,
+                    cccd_front_path: uploadedFiles['cccd_front'].path,
+                    cccd_back_path: uploadedFiles['cccd_back'].path,
+                    portrait_path: uploadedFiles['portrait'].path
                 }
             }
             await apiService.registerSME(payload)
@@ -134,37 +138,30 @@ export function RegisterSMEForm({ onSuccess, onCancel }: RegisterSMEFormProps) {
                         <h3 className="font-semibold text-lg">Upload Hồ sơ KYC</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {[
-                                {
-                                    key: 'business_license',
-                                    label: '1. Giấy phép KD (*)',
-                                    sub: '(Format: PDF, JPG, PNG – Max: 5MB)'
-                                },
-                                {
-                                    key: 'cccd_front',
-                                    label: '2. CCCD Mặt trước (*)',
-                                    sub: '(Format: PDF, JPG, PNG – Max: 5MB)'
-                                },
-                                {
-                                    key: 'cccd_back',
-                                    label: '3. CCCD Mặt sau (*)',
-                                    sub: '(Format: PDF, JPG, PNG – Max: 5MB)'
-                                },
-                                {
-                                    key: 'portrait',
-                                    label: '4. Ảnh chân dung (*)',
-                                    sub: '(Format: PDF, JPG, PNG – Max: 5MB)'
-                                },
+                                { key: 'business_license', label: '1. Giấy phép KD (*)', sub: '(Format: PDF, JPG, PNG – Max: 5MB)' },
+                                { key: 'cccd_front', label: '2. CCCD Mặt trước (*)', sub: '(Format: PDF, JPG, PNG – Max: 5MB)' },
+                                { key: 'cccd_back', label: '3. CCCD Mặt sau (*)', sub: '(Format: PDF, JPG, PNG – Max: 5MB)' },
+                                { key: 'portrait', label: '4. Ảnh chân dung (*)', sub: '(Format: PDF, JPG, PNG – Max: 5MB)' },
                             ].map((item) => (
                                 <div key={item.key} className="space-y-2">
                                     <div className="flex flex-col">
                                         <Label className="text-base font-semibold text-slate-700">{item.label}</Label>
                                         <span className="text-xs text-slate-500 font-medium">{item.sub}</span>
                                     </div>
-                                    <div className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center gap-3 transition-colors ${uploadedPaths[item.key] ? 'border-green-500 bg-green-50' : 'border-slate-300 hover:bg-slate-50'
+                                    <div className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center gap-3 transition-colors ${uploadedFiles[item.key] ? 'border-green-500 bg-green-50' : 'border-slate-300 hover:bg-slate-50'
                                         }`}>
-                                        {uploadedPaths[item.key] ? (
-                                            <div className="text-green-600 flex items-center gap-1 text-xs font-bold">
-                                                <CheckCircle size={16} /> Đã tải lên
+                                        {uploadedFiles[item.key] ? (
+                                            <div className="flex flex-col items-center">
+                                                <div className="text-green-600 flex items-center gap-2 text-sm font-bold mb-2">
+                                                    <CheckCircle size={20} /> Đã tải lên
+                                                </div>
+                                                <p className="text-xs text-slate-600 font-medium mb-3 max-w-[150px] truncate text-center">
+                                                    {uploadedFiles[item.key].name}
+                                                </p>
+                                                <label className="cursor-pointer text-xs text-blue-600 hover:underline">
+                                                    Thay đổi
+                                                    <input type="file" className="hidden" onChange={(e) => handleFileUpload(e, item.key)} />
+                                                </label>
                                             </div>
                                         ) : (
                                             uploadingKey === item.key ? (
@@ -191,7 +188,7 @@ export function RegisterSMEForm({ onSuccess, onCancel }: RegisterSMEFormProps) {
                                     'cccd_front',
                                     'cccd_back',
                                     'portrait'
-                                ].filter(key => !uploadedPaths[key]);
+                                ].filter(key => !uploadedFiles[key]);
 
                                 if (missingFiles.length > 0) {
                                     toast.error("Vui lòng tải lên đầy đủ các giấy tờ bắt buộc!");

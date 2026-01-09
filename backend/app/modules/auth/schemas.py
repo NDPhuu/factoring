@@ -83,3 +83,7 @@ class UserResponse(UserBase):
 
 class RejectUserRequest(BaseModel):
     reason: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str

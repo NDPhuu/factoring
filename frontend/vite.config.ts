@@ -11,6 +11,6 @@ export default defineConfig({
     },
   },
   server: {
-    allowedHosts: ["specifics-fda-bluetooth-jews.trycloudflare.com"],
+    allowedHosts: true,
   },
 })

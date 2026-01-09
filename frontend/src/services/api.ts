@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-export const API_URL = 'https://providers-green-capacity-screenshot.trycloudflare.com/api/v1';
+export const API_URL = "https://factoring.onrender.com/api/vi"
 
 export const api = axios.create({
     baseURL: API_URL,

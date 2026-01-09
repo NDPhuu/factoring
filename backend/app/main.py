@@ -1,3 +1,5 @@
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
+
 from fastapi import FastAPI
 from app.core.config import settings
 
@@ -36,12 +38,17 @@ from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI(title=settings.PROJECT_NAME)
 
 # Cấu hình cho phép Frontend truy cập
+origins = [
+    "https://factoring1.vercel.app",  # URL Frontend của bạn trên Vercel
+    "http://localhost:5173",          # Để bạn vẫn test được ở máy local
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://factoring1.vercel.app/","http://localhost:5173"], # Cho phép mọi domain (bao gồm Cloudflare Tunnel)
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=origins,            # Cho phép danh sách trên
+    allow_credentials=True,           # Bắt buộc phải có nếu bạn dùng Cookie/Auth Header
+    allow_methods=["*"],              # Cho phép tất cả các phương thức (GET, POST, PUT, DELETE)
+    allow_headers=["*"],              # Cho phép tất cả các Headers (Authorization, Content-Type...)
 )
 
 from fastapi.staticfiles import StaticFiles

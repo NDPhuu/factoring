@@ -1,0 +1,121 @@
+import { useState } from "react";
+import { Landmark, ArrowUpRight, DollarSign, LogOut } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useTradingInvoices, useMakeOffer } from "./hooks/useTrading";
+import type { Invoice } from "@/types";
+
+interface FIMarketplaceProps {
+    onLogout: () => void;
+}
+
+export default function FIMarketplace({ onLogout }: FIMarketplaceProps) {
+    const { data: invoices, isLoading } = useTradingInvoices();
+    const { mutate: makeOffer, isPending } = useMakeOffer();
+
+    const [selectedInv, setSelectedInv] = useState<Invoice | null>(null);
+    const [offerForm, setOfferForm] = useState({ rate: 12.5, amount: 0 });
+
+    const handleOpenOffer = (inv: Invoice) => {
+        setSelectedInv(inv);
+        setOfferForm({ rate: 12.5, amount: inv.total_amount }); // Default full amount
+    };
+
+    const handleSubmitOffer = () => {
+        if (!selectedInv) return;
+        makeOffer({
+            invoice_id: selectedInv.id,
+            interest_rate: offerForm.rate,
+            funding_amount: offerForm.amount,
+            tenor_days: 30 // Fixed for demo
+        });
+        setSelectedInv(null);
+    };
+
+    return (
+        <div className="min-h-screen bg-slate-50 p-8">
+            <header className="flex justify-between items-center mb-10">
+                <div className="flex items-center gap-3">
+                    <div className="bg-slate-900 p-2 rounded-lg text-white">
+                        <Landmark size={24} />
+                    </div>
+                    <div>
+                        <h1 className="text-2xl font-black text-slate-900">Marketplace</h1>
+                        <p className="text-slate-500 font-medium">VinaCapital Fund</p>
+                    </div>
+                </div>
+                <Button variant="ghost" className="text-red-500 font-bold" onClick={onLogout}>
+                    <LogOut size={18} className="mr-2" /> Đăng xuất
+                </Button>
+            </header>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {isLoading && <p>Loading market...</p>}
+                {invoices?.map((inv) => (
+                    <Card key={inv.id} className="rounded-[24px] shadow-sm hover:shadow-xl transition-all border-slate-100 overflow-hidden group">
+                        <div className="h-2 bg-blue-600 w-full" />
+                        <CardHeader>
+                            <div className="flex justify-between items-start mb-2">
+                                <span className="bg-blue-50 text-blue-700 font-black px-3 py-1 rounded-full text-xs tracking-wider">SCORE {inv.credit_score || 'B'}</span>
+                                <span className="text-slate-400 font-mono text-xs">#{inv.invoice_number}</span>
+                            </div>
+                            <CardTitle className="text-xl">
+                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(inv.total_amount)}
+                            </CardTitle>
+                            <CardDescription>Bên mua: <span className="text-slate-900 font-bold">{inv.buyer_name}</span></CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex justify-between bg-slate-50 p-3 rounded-xl mb-6">
+                                <div>
+                                    <p className="text-xs text-slate-500 font-bold">LỢI NHUẬN / NĂM</p>
+                                    <p className="text-lg font-black text-green-600">~12 - 15%</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-xs text-slate-500 font-bold">KỲ HẠN</p>
+                                    <p className="text-lg font-black text-slate-900">30 Ngày</p>
+                                </div>
+                            </div>
+                            <Button className="w-full font-bold rounded-xl h-12 text-md" onClick={() => handleOpenOffer(inv)}>
+                                Ra giá tài trợ <ArrowUpRight className="ml-2" />
+                            </Button>
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+
+            <Dialog open={!!selectedInv} onOpenChange={(o) => !o && setSelectedInv(null)}>
+                <DialogContent className="sm:max-w-md rounded-[32px]">
+                    <DialogHeader>
+                        <DialogTitle>Đề nghị tài trợ</DialogTitle>
+                        <DialogDescription>Nhập lãi suất và số tiền bạn muốn tài trợ cho hóa đơn #{selectedInv?.invoice_number}</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label>Lãi suất mong muốn (%/năm)</Label>
+                            <Input type="number" step="0.1" value={offerForm.rate}
+                                onChange={(e) => setOfferForm(prev => ({ ...prev, rate: Number(e.target.value) }))}
+                                className="text-lg font-bold"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Số tiền tài trợ (VND)</Label>
+                            <Input type="number" value={offerForm.amount}
+                                onChange={(e) => setOfferForm(prev => ({ ...prev, amount: Number(e.target.value) }))}
+                                className="text-lg font-bold"
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setSelectedInv(null)}>Hủy</Button>
+                        <Button onClick={handleSubmitOffer} disabled={isPending} className="bg-slate-900 text-white">
+                            <DollarSign className="mr-2 h-4 w-4" /> Gửi Offer
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </div>
+    );
+}

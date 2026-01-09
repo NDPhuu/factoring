@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<HDon xmlns="http://laphoadon.gdt.gov.vn/2014/09/invoicexml/v1">
+    <DLHDon Id="Invoice_001">
+        <TTChung>
+            <PBan>2.0.0</PBan>
+            <MSo>1/001</MSo>
+            <KHMSHDon>1</KHMSHDon>
+            <KHHDon>C24TAA</KHHDon>
+            <SHDon>00001234</SHDon>
+            <NLap>2025-01-08</NLap>
+            <DVTTe>VND</DVTTe>
+            <TGia>1.0</TGia>
+            <HTTToan>TM/CK</HTTToan>
+        </TTChung>
+        <NDHDon>
+            <NBan>
+                <Ten>CÔNG TY CỔ PHẦN CÔNG NGHỆ FACTORING DEMO</Ten>
+                <MST>0101234567</MST>
+                <DChi>Tầng 1, Tòa nhà Tech, Quận Cầu Giấy, Hà Nội</DChi>
+                <SDThoai>0909123456</SDThoai>
+                <DCTDTu>contact@sme-demo.com</DCTDTu>
+                <STKNHang>1903333333333</STKNHang>
+                <TNHang>Ngân hàng TMCP Kỹ Thương Việt Nam</TNHang>
+            </NBan>
+            <NMua>
+                <Ten>CÔNG TY TNHH MUA HÀNG TEST</Ten>
+                <MST>0312345678</MST>
+                <DChi>123 Đường Nguyễn Huệ, Quận 1, TP.HCM</DChi>
+                <MKHang>KH001</MKHang>
+                <SDThoai>0988888888</SDThoai>
+                <DCTDTu>buyer@test.com</DCTDTu>
+                <STKNHang></STKNHang>
+                <TNHang></TNHang>
+            </NMua>
+            <DSHHang>
+                <HHang>
+                    <STT>1</STT>
+                    <TChat>1</TChat>
+                    <MHang>DV001</MHang>
+                    <Ten>Dịch vụ phần mềm Factoring (Kỳ 1)</Ten>
+                    <DVTinh>Lần</DVTinh>
+                    <SLuong>1</SLuong>
+                    <DGia>100000000</DGia>
+                    <TLCKhau>0</TLCKhau>
+                    <STCKhau>0</STCKhau>
+                    <ThTien>100000000</ThTien>
+                    <TSuat>10%</TSuat>
+                </HHang>
+                <HHang>
+                    <STT>2</STT>
+                    <TChat>1</TChat>
+                    <MHang>PM002</MHang>
+                    <Ten>Phí bảo trì hệ thống</Ten>
+                    <DVTinh>Tháng</DVTinh>
+                    <SLuong>12</SLuong>
+                    <DGia>5000000</DGia>
+                    <TLCKhau>0</TLCKhau>
+                    <STCKhau>0</STCKhau>
+                    <ThTien>60000000</ThTien>
+                    <TSuat>8%</TSuat>
+                </HHang>
+            </DSHHang>
+            <TToan>
+                <THTTLTSuat>
+                    <LTSuat>
+                        <TSuat>10%</TSuat>
+                        <ThTien>100000000</ThTien>
+                        <TThue>10000000</TThue>
+                    </LTSuat>
+                    <LTSuat>
+                        <TSuat>8%</TSuat>
+                        <ThTien>60000000</ThTien>
+                        <TThue>4800000</TThue>
+                    </LTSuat>
+                </THTTLTSuat>
+                <TgTCThue>160000000</TgTCThue>
+                <TgTThue>14800000</TgTThue>
+                <TgTTTBSo>174800000</TgTTTBSo>
+                <TgTTTBChu>Một trăm bảy mươi tư triệu tám trăm nghìn đồng chẵn</TgTTTBChu>
+            </TToan>
+        </NDHDon>
+    </DLHDon>
+    <DSCKS>
+        <Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
+            <SignedInfo>
+                <CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+                <SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/>
+                <Reference URI="#Invoice_001">
+                    <Transforms>
+                        <Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+                    </Transforms>
+                    <DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
+                    <DigestValue>Base64DigestValueHere=</DigestValue>
+                </Reference>
+            </SignedInfo>
+            <SignatureValue>Base64SignatureValueHere...</SignatureValue>
+            <KeyInfo>
+                <X509Data>
+                    <X509SubjectName>CN=CÔNG TY CỔ PHẦN CÔNG NGHỆ FACTORING DEMO, O=MST:0101234567, C=VN</X509SubjectName>
+                    <X509Certificate>Base64CertificateHere...</X509Certificate>
+                </X509Data>
+            </KeyInfo>
+        </Signature>
+    </DSCKS>
+</HDon>

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>HỢP ĐỒNG BAO THANH TOÁN</title>
+    <style>
+        body { font-family: "Times New Roman", serif; line-height: 1.6; }
+        h1 { text-align: center; }
+        .bold { font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>HỢP ĐỒNG MUA BÁN KHOẢN PHẢI THU</h1>
+    <p>Số: {{ contract_number }}</p>
+    <p>Hôm nay, ngày {{ day }} tháng {{ month }} năm {{ year }}, tại hệ thống Factoring Platform.</p>
+    
+    <h3>BÊN A (BÊN BÁN): {{ sme_name }}</h3>
+    <p>Mã số thuế: {{ sme_tax_code }}</p>
+    
+    <h3>BÊN B (BÊN MUA): {{ fi_name }}</h3>
+    <p>Đại diện: {{ fi_short_name }}</p>
+    
+    <h3>ĐIỀU 1: THỎA THUẬN MUA BÁN</h3>
+    <p>Bên A đồng ý bán và Bên B đồng ý mua khoản phải thu theo Hóa đơn số <span class="bold">{{ invoice_number }}</span>.</p>
+    
+    <h3>ĐIỀU 2: GIÁ TRỊ VÀ PHÍ</h3>
+    <ul>
+        <li>Giá trị hóa đơn: {{ total_amount }} VND</li>
+        <li>Số tiền tài trợ (Giá mua): <span class="bold">{{ funding_amount }} VND</span></li>
+        <li>Lãi suất chiết khấu: {{ interest_rate }}%/năm</li>
+        <li>Phí nền tảng: {{ platform_fee }} VND</li>
+    </ul>
+    
+    <h3>ĐIỀU 3: THANH TOÁN</h3>
+    <p>Bên B sẽ chuyển số tiền thực nhận là <span class="bold">{{ net_amount }} VND</span> vào tài khoản của Bên A sau khi ký hợp đồng này.</p>
+    
+    <p><i>(Ký điện tử bởi hệ thống)</i></p>
+</body>
+</html>

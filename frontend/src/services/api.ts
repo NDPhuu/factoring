@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-export const API_URL = "https://factoring.onrender.com/api/vi"
+export const API_URL = "https://factoring.onrender.com/api/v1"
 
 export const api = axios.create({
     baseURL: API_URL,
@@ -47,6 +47,7 @@ export const apiService = {
     uploadInvoice: (formData: FormData) => api.post('/invoices/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
     }),
+    calculateScore: (id: number) => api.post(`/scoring/calculate/${id}`),
 
     // Trading
     getTradingInvoices: () => api.get('/trading/marketplace'),

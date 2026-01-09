@@ -38,7 +38,7 @@ app = FastAPI(title=settings.PROJECT_NAME)
 # Cấu hình cho phép Frontend truy cập
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Cho phép mọi domain (bao gồm Cloudflare Tunnel)
+    allow_origins=["https://factoring1.vercel.app/","http://localhost:5173"], # Cho phép mọi domain (bao gồm Cloudflare Tunnel)
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

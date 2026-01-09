@@ -15,6 +15,8 @@ const statusMap: Record<InvoiceStatus, { label: string; color: string; icon: any
     [InvoiceStatus.CLOSED]: { label: 'Tất toán', color: 'text-slate-600 bg-slate-50', icon: Lock },
     [InvoiceStatus.TRADING]: { label: 'Đang rao bán', color: 'text-indigo-600 bg-indigo-50', icon: Activity },
     [InvoiceStatus.DRAFT]: { label: 'Nháp', color: 'text-slate-400 bg-slate-50', icon: Clock },
+    [InvoiceStatus.DISBURSED]: { label: 'Đã nhận tiền', color: 'text-purple-600 bg-purple-50', icon: CheckCircle2 },
+    [InvoiceStatus.REPAYMENT_RECEIVED]: { label: 'Chờ tất toán', color: 'text-orange-600 bg-orange-50', icon: Clock },
 };
 
 const InvoiceTable: React.FC<Props> = ({ invoices, onCalculateScore }) => {

@@ -31,10 +31,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onComplete, onCance
         legal_rep_name: '', legal_rep_cccd: '', phone_number: ''
     });
 
-    const [files, setFiles] = useState({
-        business_license: null, cccd_front: null, cccd_back: null, portrait: null
-    });
-
     const [loading, setLoading] = useState(false);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -46,9 +42,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onComplete, onCance
         const file = e.target.files?.[0];
         if (file) {
             try {
-                // Update local file state for visual feedback (optional)
-                setFiles(prev => ({ ...prev, [key]: file }));
-
                 // Bước 1: Upload ảnh ngay khi chọn để lấy path từ Backend
                 const filePath = await apiService.uploadKYC(file);
                 setFormData(prev => ({ ...prev, [`${key}_path`]: filePath }));

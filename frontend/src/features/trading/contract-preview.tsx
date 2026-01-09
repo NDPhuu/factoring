@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import type { Offer, Invoice } from "@/types";
 import { Check, Download } from "lucide-react";
 

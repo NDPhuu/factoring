@@ -14,6 +14,7 @@ export const InvoiceStatus = {
     TRADING: 'TRADING',
     FINANCED: 'FINANCED',
     DISBURSED: 'DISBURSED',
+    REPAYMENT_RECEIVED: 'REPAYMENT_RECEIVED',
     CLOSED: 'CLOSED'
 } as const;
 
@@ -51,7 +52,8 @@ export interface Invoice {
     file_path_invoice_pdf?: string;
     file_path_contract_pdf?: string;
     file_path_delivery_pdf?: string;
-    credit_score?: 'A' | 'B' | 'C' | null;
+    credit_score?: number | null;
+    grade?: string | null;
     owner_id: number;
 }
 

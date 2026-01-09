@@ -1,4 +1,4 @@
-import { Loader2, ArrowLeftRight, FileBarChart, PlusCircle } from "lucide-react";
+import { ArrowLeftRight, FileBarChart, PlusCircle } from "lucide-react";
 import {
     Table,
     TableBody,
@@ -24,7 +24,8 @@ const statusMap: Record<InvoiceStatus, { label: string; variant: "default" | "se
     [InvoiceStatus.REJECTED]: { label: 'Từ chối', variant: 'destructive' },
     [InvoiceStatus.TRADING]: { label: 'Đang giao dịch', variant: 'default' },
     [InvoiceStatus.FINANCED]: { label: 'Đã tài trợ', variant: 'success' },
-    [InvoiceStatus.DISBURSED]: { label: 'Đã giải ngân', variant: 'success' }, // Added for completeness
+    [InvoiceStatus.DISBURSED]: { label: 'Đã giải ngân', variant: 'success' },
+    [InvoiceStatus.REPAYMENT_RECEIVED]: { label: 'Chờ tất toán', variant: 'warning' },
     [InvoiceStatus.CLOSED]: { label: 'Đã đóng', variant: 'outline' },
 };
 
@@ -95,13 +96,13 @@ export function InvoiceList({ onViewOffers }: InvoiceListProps) {
                             </Badge>
                         </TableCell>
                         <TableCell>
-                            {inv.credit_score ? (
+                            {inv.grade ? (
                                 <Badge variant="outline" className={
-                                    inv.credit_score === 'A' ? "bg-green-50 text-green-700 border-green-200" :
-                                        inv.credit_score === 'B' ? "bg-blue-50 text-blue-700 border-blue-200" :
+                                    inv.grade === 'A' ? "bg-green-50 text-green-700 border-green-200" :
+                                        inv.grade === 'B' ? "bg-blue-50 text-blue-700 border-blue-200" :
                                             "bg-yellow-50 text-yellow-700 border-yellow-200"
                                 }>
-                                    Hạng {inv.credit_score}
+                                    Hạng {inv.grade} ({inv.credit_score})
                                 </Badge>
                             ) : <span className="text-slate-300 text-xs text-center block font-mono">--</span>}
                         </TableCell>

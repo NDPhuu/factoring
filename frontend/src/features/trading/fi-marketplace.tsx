@@ -1,12 +1,9 @@
 import { useState } from "react";
-import { Landmark, ArrowUpRight, DollarSign, LogOut } from "lucide-react";
+import { Landmark, ArrowUpRight, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
 import { DealDetailDrawer } from "./deal-detail-drawer";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useTradingInvoices, useMakeOffer } from "./hooks/useTrading";
+import { useTradingInvoices } from "./hooks/useTrading";
 import type { Invoice } from "@/types";
 
 interface FIMarketplaceProps {
@@ -15,25 +12,11 @@ interface FIMarketplaceProps {
 
 export default function FIMarketplace({ onLogout }: FIMarketplaceProps) {
     const { data: invoices, isLoading } = useTradingInvoices();
-    const { mutate: makeOffer, isPending } = useMakeOffer();
 
     const [selectedInv, setSelectedInv] = useState<Invoice | null>(null);
-    const [offerForm, setOfferForm] = useState({ rate: 12.5, amount: 0 });
 
     const handleOpenOffer = (inv: Invoice) => {
         setSelectedInv(inv);
-        setOfferForm({ rate: 12.5, amount: inv.total_amount }); // Default full amount
-    };
-
-    const handleSubmitOffer = () => {
-        if (!selectedInv) return;
-        makeOffer({
-            invoice_id: selectedInv.id,
-            interest_rate: offerForm.rate,
-            funding_amount: offerForm.amount,
-            tenor_days: 30 // Fixed for demo
-        });
-        setSelectedInv(null);
     };
 
     return (

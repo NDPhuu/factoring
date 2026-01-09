@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { type Invoice, InvoiceStatus } from '../types';
 import { apiService } from '../services/api';
 import { Landmark, ArrowUpRight, DollarSign } from 'lucide-react';

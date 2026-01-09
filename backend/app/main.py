@@ -30,6 +30,7 @@ from app.modules.trading.router import router as trading_router
 from app.modules.sme.router import router as sme_router
 from app.modules.dashboard.router import router as dashboard_router
 from app.modules.payment.router import router as payment_router
+from app.modules.fi.router import router as fi_router
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title=settings.PROJECT_NAME)
@@ -60,6 +61,7 @@ app.include_router(trading_router, prefix=settings.API_V1_STR)
 app.include_router(sme_router, prefix=settings.API_V1_STR)
 app.include_router(dashboard_router, prefix=settings.API_V1_STR)
 app.include_router(payment_router, prefix=settings.API_V1_STR)
+app.include_router(fi_router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 async def root():

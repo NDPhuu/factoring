@@ -158,7 +158,10 @@ async def get_all_invoices_admin(
         
     stmt = (
         select(inv_models.Invoice)
-        .options(selectinload(inv_models.Invoice.credit_score))
+        .options(
+            selectinload(inv_models.Invoice.credit_score),
+            selectinload(inv_models.Invoice.offers)
+        )
         .order_by(inv_models.Invoice.created_at.desc())
     )
     result = await db.execute(stmt)
@@ -174,7 +177,16 @@ async def get_all_invoices_admin(
             "created_at": inv.created_at,
             "buyer_name": inv.buyer_name,
             "verification_details": inv.verification_details,
-            "credit_score": inv.credit_score.total_score if inv.credit_score else None
+            "credit_score": inv.credit_score.total_score if inv.credit_score else None,
+            "offers": [
+                {
+                    "id": o.id,
+                    "status": o.status,
+                    "funding_amount": o.funding_amount,
+                    "net_to_fi": o.net_to_fi,
+                    "fi_id": o.fi_id
+                } for o in inv.offers
+            ]
         }
         for inv in invoices
     ]

@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import String, ForeignKey, DateTime, Enum
+from sqlalchemy import String, ForeignKey, DateTime, Enum, DECIMAL
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy.sql import func
@@ -21,7 +21,12 @@ class FinancialInstitution(Base):
     fi_type: Mapped[FIType] = mapped_column(Enum(FIType), default=FIType.BANK)
     contact_person_name: Mapped[str] = mapped_column(EncryptedString, nullable=True)
     contact_phone: Mapped[str] = mapped_column(EncryptedString, nullable=True)
+    contact_phone: Mapped[str] = mapped_column(EncryptedString, nullable=True)
     risk_config: Mapped[dict] = mapped_column(JSONB, nullable=True, server_default='{}')
+    
+    # Balance for Settlement Simulation (Default 50 Billion VND)
+    balance: Mapped[float] = mapped_column(DECIMAL(18, 2), default=50_000_000_000.0, server_default="50000000000")
+    
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=func.now(), nullable=True)
 

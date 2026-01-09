@@ -67,35 +67,59 @@ async def get_fi_summary(
     
     fi_id = current_user.fi_profile.id
 
-    # 1. Tổng tiền đã đầu tư (Total Invested)
+    # 1. Tổng tiền đã đầu tư (Total Invested) & Lợi nhuận dự kiến
     # Dựa vào bảng Offers đã ACCEPTED
-    q1 = select(func.sum(trade_models.Offer.funding_amount)).where(
-        and_(
-            trade_models.Offer.fi_id == fi_id,
-            trade_models.Offer.status == trade_models.OfferStatus.ACCEPTED
+    # Fix: Nếu net_to_fi null (data cũ), dùng total_amount * 0.995 (trừ 0.5% phí)
+    
+    stmt = (
+        select(
+            func.sum(trade_models.Offer.funding_amount).label("invested"),
+            func.sum(
+                func.coalesce(
+                    trade_models.Offer.net_to_fi, 
+                    inv_models.Invoice.total_amount * 0.995
+                )
+            ).label("expected_return")
+        )
+        .join(trade_models.Offer.invoice)
+        .where(
+            and_(
+                trade_models.Offer.fi_id == fi_id,
+                trade_models.Offer.status == trade_models.OfferStatus.ACCEPTED
+            )
         )
     )
-    total_invested = (await db.execute(q1)).scalar() or 0
+    
+    result = (await db.execute(stmt)).one()
+    total_invested = result.invested or 0
+    expected_return = result.expected_return or 0
+    
+    projected_profit = float(expected_return) - float(total_invested)
+    
+    roi_percentage = 0.0
+    if total_invested > 0:
+        roi_percentage = (projected_profit / float(total_invested)) * 100
 
-    # 2. Số lượng Deal đang chờ xử lý (Active Offers)
-    q2 = select(func.count(trade_models.Offer.id)).where(
-        and_(
-            trade_models.Offer.fi_id == fi_id,
-            trade_models.Offer.status == trade_models.OfferStatus.PENDING
+    # 2. Số lượng Active Assets (Đã giải ngân, chưa đóng)
+    # Thay vì đếm Pending Offer, ta đếm số Invoice đang nắm giữ (Active Deals)
+    q2 = (
+        select(func.count(trade_models.Offer.id))
+        .join(trade_models.Offer.invoice)
+        .where(
+            and_(
+                trade_models.Offer.fi_id == fi_id,
+                trade_models.Offer.status == trade_models.OfferStatus.ACCEPTED,
+                inv_models.Invoice.status != inv_models.InvoiceStatus.CLOSED
+            )
         )
     )
-    active_offers = (await db.execute(q2)).scalar() or 0
-
-    # 3. Lợi nhuận dự kiến (Projected Profit)
-    # Công thức đơn giản: Tổng tiền * Lãi suất trung bình (Giả sử 12%/năm trong 3 tháng)
-    # Trong thực tế phải tính từng deal. Ở đây ước lượng nhanh.
-    projected_profit = float(total_invested) * 0.12 * (90/365)
+    active_deals = (await db.execute(q2)).scalar() or 0
 
     return {
         "total_invested": total_invested,
-        "active_offers_count": active_offers,
+        "active_offers_count": active_deals, # Reusing key for frontend compatibility (Label is 'Active Deals')
         "projected_profit": projected_profit,
-        "roi_percentage": 12.5 # Giả định
+        "roi_percentage": round(roi_percentage, 2) 
     }
 
 @router.get("/admin/summary")

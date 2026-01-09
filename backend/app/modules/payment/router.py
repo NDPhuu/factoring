@@ -164,14 +164,56 @@ async def sepay_webhook(
 
 @router.post("/simulate/fi-fund/{invoice_id}")
 async def simulate_fi_fund(invoice_id: int, db: AsyncSession = Depends(get_db)):
-    """Bước 1: Giả lập FI chuyển tiền vào Platform"""
-    invoice = await db.get(inv_models.Invoice, invoice_id)
+    """Bước 1: Giả lập FI chuyển tiền vào Platform (Có trừ Balance của FI)"""
+    # 1. Load Invoice & Offers & FI
+    stmt = select(inv_models.Invoice).options(
+        selectinload(inv_models.Invoice.offers).selectinload(trade_models.Offer.fi)
+    ).where(inv_models.Invoice.id == invoice_id)
+    
+    res = await db.execute(stmt)
+    invoice = res.scalar_one_or_none()
+    
     if not invoice or invoice.status != inv_models.InvoiceStatus.FINANCED:
         raise HTTPException(status_code=400, detail="Invoice not ready for funding")
     
+    # 2. Find Accepted Offer
+    accepted_offer = next((o for o in invoice.offers if o.status == trade_models.OfferStatus.ACCEPTED), None)
+    if not accepted_offer:
+        raise HTTPException(status_code=404, detail="No accepted offer found for this invoice")
+        
+    fi_entity = accepted_offer.fi
+    transfer_amount = float(accepted_offer.fi_disbursement_amount or accepted_offer.funding_amount)
+    
+    # 3. Check Balance
+    if float(fi_entity.balance) < transfer_amount:
+         raise HTTPException(status_code=400, detail=f"Insufficient FI Balance. Required: {transfer_amount:,.0f}, Available: {fi_entity.balance:,.0f}")
+    
+    # 4. Deduct Balance & Update Status
+    fi_entity.balance = float(fi_entity.balance) - transfer_amount
     invoice.status = inv_models.InvoiceStatus.FUNDING_RECEIVED
+    
+    # 5. Log Transaction
+    new_tx = pay_models.BankTransaction(
+        sepay_id=None, # Simulation
+        gateway="SIMULATOR",
+        transaction_date=datetime.now(),
+        account_number="PLATFORM_INTERMEDIARY",
+        sub_account=None,
+        transfer_type="in",
+        transfer_amount=transfer_amount,
+        code=f"INV-{invoice.id}",
+        content=f"SIMULATED FUNDING {invoice.invoice_number}",
+        status="SUCCESS",
+        related_invoice_id=invoice.id,
+        raw_data={"simulated": True, "fi_id": fi_entity.id}
+    )
+    db.add(new_tx)
+
     await db.commit()
-    return {"status": "FUNDING_RECEIVED", "message": "FI Funds received in Intermediary Account"}
+    return {
+        "status": "FUNDING_RECEIVED", 
+        "message": f"Successfully transferred {transfer_amount:,.0f} VND. FI Balance remaining: {fi_entity.balance:,.0f} VND"
+    }
 
 @router.post("/simulate/platform-disburse/{invoice_id}")
 async def simulate_platform_to_sme(invoice_id: int, db: AsyncSession = Depends(get_db)):

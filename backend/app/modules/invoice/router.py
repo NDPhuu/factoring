@@ -7,6 +7,7 @@ from app.modules.auth.router import get_current_user
 from app.modules.invoice import models as inv_models
 from app.modules.invoice.parser import InvoiceParser
 from app.modules.invoice.services import InvoiceVerificationService
+from app.modules.scoring.services import ScoringService
 from app.core.utils import save_upload_file
 import uuid
 from sqlalchemy import select, desc  # <--- THÊM select VÀ desc (để sắp xếp)
@@ -95,6 +96,11 @@ async def upload_invoice_package(
     # Verify ngay lập tức
     verify_service = InvoiceVerificationService(db)
     verified_invoice = await verify_service.verify(new_invoice.id)
+
+    # Calculate Score if Verified
+    if verified_invoice.status == inv_models.InvoiceStatus.VERIFIED:
+        scoring_service = ScoringService(db)
+        await scoring_service.calculate_score(verified_invoice.id)
 
     return {
         "id": verified_invoice.id,

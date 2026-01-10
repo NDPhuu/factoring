@@ -2,6 +2,7 @@ import React from "react";
 import { LayoutDashboard, Store, Briefcase, Settings, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { ChatWidget } from "@/features/chatbot/ChatWidget";
 
 interface FILayoutProps {
     currentPage: string;
@@ -64,6 +65,8 @@ export function FILayout({ currentPage, onNavigate, onLogout, children }: FILayo
             <main className="flex-1 md:ml-64 p-8">
                 {children}
             </main>
+
+            <ChatWidget />
         </div>
     );
 }

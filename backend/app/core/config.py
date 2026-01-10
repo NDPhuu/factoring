@@ -33,6 +33,9 @@ class Settings(BaseSettings):
 
     SEPAY_WEBHOOK_KEY: str
     
+    # AI (Gemini)
+    GEMINI_API_KEY: str = ""
+    
     UPLOAD_DIR: str = "storage/uploads"
 
 

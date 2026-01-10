@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Plus, LayoutDashboard, FileText, Settings, LogOut } from "lucide-react";
+import { ChatWidget } from "@/features/chatbot/ChatWidget";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { InvoiceList } from "@/features/invoices/invoice-list";
@@ -161,6 +162,8 @@ export default function SMEDashboard({ onLogout }: SMEDashboardProps) {
                 onOpenChange={setOfferDialogOpen}
                 invoice={selectedInvoice}
             />
+
+            <ChatWidget />
         </div>
     );
 }

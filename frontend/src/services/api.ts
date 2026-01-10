@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-export const API_URL = "https://factoring.onrender.com/api/v1"
+// Auto-detect environment based on hostname
+const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+export const API_URL = import.meta.env.VITE_API_URL || (isLocal ? "http://localhost:8000/api/v1" : "https://factoring.onrender.com/api/v1");
 
 export const api = axios.create({
     baseURL: API_URL,
@@ -76,4 +78,7 @@ export const apiService = {
     simulatePlatformDisburse: (id: number) => api.post(`/payment/simulate/platform-disburse/${id}`),
     simulateDebtorPay: (id: number) => api.post(`/payment/simulate/debtor-pay/${id}`),
     simulatePlatformRemit: (id: number) => api.post(`/payment/simulate/platform-remit/${id}`),
+
+    // Chatbot
+    chat: (message: string) => api.post('/chatbot/chat', { message }),
 };

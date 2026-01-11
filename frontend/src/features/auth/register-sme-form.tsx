@@ -120,7 +120,25 @@ export function RegisterSMEForm({ onSuccess, onCancel }: RegisterSMEFormProps) {
             toast.success("Đăng ký thành công! Đang chờ duyệt.")
             onSuccess()
         } catch (err: any) {
-            toast.error("Đăng ký lỗi: " + (err.response?.data?.detail || "Lỗi không xác định"));
+            console.error("Registration Error:", err);
+            let errorMessage = "Đăng ký thất bại, vui lòng thử lại.";
+            
+            if (err.response) {
+                const data = err.response.data;
+                const status = err.response.status;
+
+                if (status === 422 && Array.isArray(data.detail)) {
+                     // Handle Validation Errors (FastAPI default)
+                     errorMessage = "Lỗi dữ liệu: " + data.detail.map((e: any) => `${e.loc.join('.')} ${e.msg}`).join(', ');
+                } else if (data?.detail) {
+                    // Handle Standard HTTP Exceptions (400, 401, 403, etc.)
+                    errorMessage = `Lỗi: ${data.detail}`;
+                }
+            } else if (err.message) {
+                 errorMessage = err.message;
+            }
+
+            toast.error(errorMessage);
         } finally {
             setLoading(false)
         }

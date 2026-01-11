@@ -74,6 +74,16 @@ async def register_sme(payload: auth_schemas.RegisterSMERequest, db: AsyncSessio
          print("DEBUG: Tax Code already exists")
          raise HTTPException(status_code=400, detail="Tax Code already exists")
 
+    # 2.1 Check CCCD exists (Manual check because of Encryption/Non-deterministic)
+    # Note: In production, use a Blind Index (Hash) for efficient searching.
+    result = await db.execute(select(sme_models.SME))
+    all_smes = result.scalars().all()
+    for sme in all_smes:
+        # Decryption happens automatically on property access via TypeDecorator
+        if sme.legal_rep_cccd == payload.sme.legal_rep_cccd:
+             print("DEBUG: CCCD already exists")
+             raise HTTPException(status_code=400, detail="CCCD already exists")
+
     # 3. Create User
     new_user = auth_models.User(
         email=payload.user.email,

@@ -53,69 +53,73 @@ const App: React.FC = () => {
     setAdminPage('dashboard');
   };
 
-  if (!token || !currentUser) {
-    if (view === 'REGISTER') {
+  const renderContent = () => {
+    if (!token || !currentUser) {
+      if (view === 'REGISTER') {
+        return (
+          <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+            <RegisterSMEForm
+              onSuccess={() => setView('LOGIN')}
+              onCancel={() => setView('LOGIN')}
+            />
+          </div>
+        );
+      }
       return (
         <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-          <RegisterSMEForm
-            onSuccess={() => setView('LOGIN')}
-            onCancel={() => setView('LOGIN')}
+          <LoginForm
+            onLoginSuccess={handleLoginSuccess}
+            onRegisterClick={() => setView('REGISTER')}
           />
         </div>
       );
     }
+
+    if (currentUser.role === UserRole.SME) {
+      return <SMEDashboard onLogout={handleLogout} />;
+    }
+
+    if (currentUser.role === UserRole.FI) {
+      return (
+        <FILayout
+          currentPage={fiPage}
+          onNavigate={setFiPage}
+          onLogout={handleLogout}
+        >
+          {fiPage === 'dashboard' && <FIDashboard />}
+          {fiPage === 'marketplace' && <FIMarketplace onLogout={handleLogout} />}
+          {fiPage === 'portfolio' && <FIPortfolio />}
+          {fiPage === 'settings' && <FISettings />}
+        </FILayout>
+      );
+    }
+
+    if (currentUser.role === UserRole.ADMIN) {
+      return (
+        <AdminLayout
+          currentPage={adminPage}
+          onNavigate={setAdminPage}
+          onLogout={handleLogout}
+        >
+          {adminPage === 'dashboard' && <AdminDashboardOverview />}
+          {adminPage === 'users' && <UserApprovalPage />}
+          {adminPage === 'invoices' && <InvoiceAuditPage />}
+          {adminPage === 'transactions' && <TransactionMonitorPage />}
+        </AdminLayout>
+      )
+    }
+
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <LoginForm
-          onLoginSuccess={handleLoginSuccess}
-          onRegisterClick={() => setView('REGISTER')}
-        />
+      <div className="flex h-screen w-screen items-center justify-center">
+        Unknown Role: {currentUser.role} <button onClick={handleLogout}>Logout</button>
       </div>
     );
-  }
-
-  if (currentUser.role === UserRole.SME) {
-    return <SMEDashboard onLogout={handleLogout} />;
-  }
-
-
-
-  if (currentUser.role === UserRole.FI) {
-    return (
-      <FILayout
-        currentPage={fiPage}
-        onNavigate={setFiPage}
-        onLogout={handleLogout}
-      >
-        {fiPage === 'dashboard' && <FIDashboard />}
-        {fiPage === 'marketplace' && <FIMarketplace onLogout={handleLogout} />}
-        {fiPage === 'portfolio' && <FIPortfolio />}
-        {fiPage === 'settings' && <FISettings />}
-      </FILayout>
-    );
-  }
-
-  if (currentUser.role === UserRole.ADMIN) {
-    return (
-      <AdminLayout
-        currentPage={adminPage}
-        onNavigate={setAdminPage}
-        onLogout={handleLogout}
-      >
-        {adminPage === 'dashboard' && <AdminDashboardOverview />}
-        {adminPage === 'users' && <UserApprovalPage />}
-        {adminPage === 'invoices' && <InvoiceAuditPage />}
-        {adminPage === 'transactions' && <TransactionMonitorPage />}
-      </AdminLayout>
-    )
-  }
+  };
 
   return (
     <>
       <Toaster position="top-right" richColors />
-      <div className="flex h-screen w-screen items-center justify-center">
-        Unknown Role: {currentUser.role} <button onClick={handleLogout}>Logout</button>
-      </div>
+      {renderContent()}
     </>
   );
 };

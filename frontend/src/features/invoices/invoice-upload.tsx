@@ -59,9 +59,10 @@ export function InvoiceUpload({ onSuccess }: InvoiceUploadProps) {
                 setFiles({ xml: null, invoice_pdf: null, contract_pdf: null, delivery_pdf: null }); // Clear form
                 setTimeout(onSuccess, 1000);
             },
-            onError: (err) => {
-                console.error(err);
-                toast.error("Lỗi khi upload hóa đơn. Vui lòng thử lại.");
+            onError: (err: any) => {
+                console.error("Upload Error:", err);
+                const errorMessage = err.response?.data?.detail || err.message || "Lỗi khi upload hóa đơn. Vui lòng thử lại.";
+                toast.error(`Upload thất bại: ${errorMessage}`);
                 setUploadProgress(0);
             }
         });

@@ -45,6 +45,9 @@ async def upload_invoice_package(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=f"Invalid XML Data: {str(e)}")
     except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"DEBUG: Invoice Processing Error: {e}")
         raise HTTPException(status_code=500, detail=f"Unexpected Error during processing: {str(e)}")
 
     upload_session = uuid.uuid4().hex[:8]
@@ -91,6 +94,9 @@ async def upload_invoice_package(
             supabase_storage.delete_file(path_delivery)
         except:
             pass # Fail silently on cleanup
+        import traceback
+        traceback.print_exc()
+        print(f"DEBUG: Database Commit Error: {e}")
         raise HTTPException(status_code=500, detail=f"Database commit failed: {str(e)}")
 
     # Verify ngay lập tức

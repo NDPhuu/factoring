@@ -20,4 +20,7 @@ async def save_upload_file(upload_file: UploadFile, sme_id: int, sub_folder: str
         return supabase_storage.upload_file(content, destination_path, upload_file.content_type)
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"DEBUG: File Upload Error: {e}")
         raise HTTPException(status_code=500, detail=f"Could not save file to Supabase: {str(e)}")
